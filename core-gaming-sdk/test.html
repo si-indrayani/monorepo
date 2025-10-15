@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Core SDK Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .demo-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .code-block {
+            background: #f8f8f8;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 10px 0;
+            border-left: 4px solid #007acc;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            background: #e8f5e8;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .error {
+            background: #ffe8e8;
+        }
+    </style>
+</head>
+<body>
+   
+
+   
+    <div class="demo-section">
+    
+        <div id="game-container"></div>
+        <div id="status" class="status">
+            Status: Initializing...
+        </div>
+    </div>
+
+    <script type="module">
+        const statusDiv = document.getElementById('status');
+
+        // PRODUCTION APPROACH: Bootstrap script loads everything
+        statusDiv.textContent = '� Starting Production Bootstrap...';
+        console.log('� Starting Production Bootstrap...');
+
+        // Simulate production bootstrap (what bootstrap.js would do)
+        async function productionBootstrap() {
+            const local_url="http://localhost:8000";
+            const S3_BASE_URL = 'https://si-gaming-fantasy.s3.amazonaws.com'; // Actual S3 URL
+            const AVAILABLE_GAMES = ['puzzle', 'trivia'];
+
+            function loadScript(url, isModule = false) {
+                return new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = url;
+                    if (isModule) {
+                        script.type = 'module';
+                    }
+                    script.onload = resolve;
+                    script.onerror = reject;
+                    document.head.appendChild(script);
+                });
+            }
+
+            try {
+                // Step 1: Load Core SDK (from S3)
+                // statusDiv.textContent = '📦 Loading Core SDK from S3...';
+                // console.log('📦 Loading Core SDK from S3...');
+                await loadScript(`${local_url}/dist/index.js`, true); // Load as ES module
+                
+                // Give the module a moment to initialize
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // console.log('✅ Core SDK loaded, proceeding to register games...');
+
+                // // Step 2: Load Game Plugins (they will register themselves)
+                // statusDiv.textContent = '🎯 Loading game plugins...';
+                console.log('🎯 Loading game plugins...');
+
+                // Load puzzle game plugin
+                await loadScript(`${local_url}/game-plugins/puzzle/puzzle-game-plugin.js`);
+                // console.log('🧩 Puzzle plugin loaded');
+
+                // Load trivia game plugin  
+                await loadScript(`${local_url}/game-plugins/trivia/trivia-game-plugin.js`);
+                console.log('❓ Trivia plugin loaded');
+
+                console.log('✅ Game plugins loaded and registered');
+
+                // Step 3: Initialize GameSelector (reads from global registry)
+                statusDiv.textContent = '🎮 Initializing GameSelector...';
+                console.log('🎮 Initializing GameSelector...');
+
+                const games = window.CoreGaming.RegistryInstance.getAllGames();
+                statusDiv.textContent = `✅ Production ready! Available games: ${games.map(g => g.getName()).join(', ')}`;
+                console.log('✅ Games registered:', games.map(g => g.getName()));
+
+                // Initialize the GameSelector - it will show the registered games
+                const gameSelector = new window.CoreGaming.GameSelector('game-container');
+                console.log('🎮 GameSelector initialized - users can now click game buttons!');
+
+            } catch (error) {
+                statusDiv.textContent = '❌ Bootstrap failed';
+                statusDiv.classList.add('error');
+                console.error('❌ Bootstrap error:', error);
+            }
+        }
+
+        // Start production-style bootstrap
+        productionBootstrap();
+    </script>
+</body>
+</html>

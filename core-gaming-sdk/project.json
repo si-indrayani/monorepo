@@ -1,0 +1,33 @@
+{
+  "name": "core-gaming-sdk",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/core-gaming-sdk/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "packages/core-gaming-sdk/dist",
+        "main": "packages/core-gaming-sdk/src/index.ts",
+        "tsConfig": "packages/core-gaming-sdk/tsconfig.lib.json",
+        "assets": []
+      }
+    },
+    "lint": {
+      "executor": "@nx/linter:eslint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/core-gaming-sdk/**/*.ts"]
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "packages/core-gaming-sdk/jest.config.ts"
+      }
+    }
+  },
+  "tags": ["scope:core", "type:lib"]
+}

@@ -1,0 +1,21 @@
+{
+  "name": "@si/core-gaming-sdk",
+  "version": "1.0.0",
+  "description": "Core Gaming SDK for dynamic game discovery and management",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsc --watch"
+  },
+  "devDependencies": {
+    "@types/node": "^24.7.1",
+    "dotenv": "^17.2.3",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.3"
+  },
+  "files": [
+    "dist/"
+  ]
+}

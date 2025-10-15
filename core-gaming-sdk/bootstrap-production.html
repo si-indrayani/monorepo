@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Production Gaming Hub</title>
+</head>
+<body>
+    <div id="game-container"></div>
+
+    <script type="module">
+        // Production Bootstrap Script
+        const S3_BASE_URL = 'https://si-gaming-fantasy.s3.amazonaws.com';
+        const AVAILABLE_GAMES = ['puzzle', 'trivia']; // Could come from API/config
+
+        async function loadScript(url, isModule = false) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = url;
+                if (isModule) {
+                    script.type = 'module';
+                }
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
+        async function bootstrap() {
+            try {
+                // Step 1: Load Core SDK (exposes window.CoreGaming)
+                console.log('📦 Loading Core Gaming SDK...');
+                await import(`${S3_BASE_URL}/core-sdk/index.js`);
+                console.log('✅ Core SDK loaded globally');
+
+                // Step 2: Load all game plugins (they register themselves)
+                console.log('🎯 Loading game plugins...');
+                const pluginPromises = AVAILABLE_GAMES.map(gameName =>
+                    loadScript(`${S3_BASE_URL}/${gameName}/load-app-scripts.js`)
+                );
+
+                await Promise.all(pluginPromises);
+                console.log('✅ All game plugins loaded and registered');
+
+                // Step 3: Initialize GameSelector (shows available games)
+                console.log('🎮 Initializing GameSelector...');
+                const gameSelector = new window.CoreGaming.GameSelector('game-container', S3_BASE_URL);
+                console.log('✅ GameSelector ready - users can now select games!');
+
+            } catch (error) {
+                console.error('❌ Bootstrap failed:', error);
+            }
+        }
+
+        // Start the application
+        bootstrap();
+    </script>
+</body>
+</html></content>
+<parameter name="filePath">/home/indrayani/Downloads/quiz-iq-frontend/core-gaming-sdk/bootstrap-production.html

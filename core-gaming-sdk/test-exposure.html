@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Global Exposure Test</title>
+</head>
+<body>
+    <h1>Testing Global Exposure</h1>
+    <div id="output"></div>
+
+    <script type="module">
+        const output = document.getElementById('output');
+
+        output.textContent = 'Loading SDK...';
+        console.log('Loading SDK...');
+
+        // Import the SDK
+        import('./dist/index.js').then(() => {
+            output.textContent = 'SDK loaded, waiting for global exposure...';
+            console.log('SDK loaded, checking global exposure...');
+
+            // Wait for global exposure
+            setTimeout(() => {
+                if (window.CoreGaming) {
+                    output.textContent = '✅ SUCCESS: window.CoreGaming available!';
+                    console.log('✅ SUCCESS: window.CoreGaming available!', Object.keys(window.CoreGaming));
+
+                    if (window.CoreGaming.Game && window.CoreGaming.GameRegistry && window.CoreGaming.RegistryInstance) {
+                        output.innerHTML += '<br>✅ All core classes exposed globally';
+
+                        // Test creating a game
+                        class TestGame extends window.CoreGaming.Game {
+                            constructor() {
+                                super('test', 'https://test.com', '🧪');
+                            }
+                            getScriptsLoadedEvent() { return 'test-scripts-loaded'; }
+                            getGradient() { return 'linear-gradient(45deg, #ff0000, #00ff00)'; }
+                        }
+
+                        const testGame = new TestGame();
+                        window.CoreGaming.RegistryInstance.registerGame(testGame);
+
+                        const games = window.CoreGaming.RegistryInstance.getAllGames();
+                        output.innerHTML += `<br>✅ Test game registered. Total games: ${games.length}`;
+                        console.log('✅ Test successful!');
+                    } else {
+                        output.innerHTML += '<br>❌ Missing core classes';
+                    }
+                } else {
+                    output.textContent = '❌ FAILED: window.CoreGaming not available';
+                    console.error('❌ FAILED: window.CoreGaming not available');
+                }
+            }, 100);
+        }).catch(err => {
+            output.textContent = '❌ Import failed: ' + err.message;
+            console.error('Import error:', err);
+        });
+    </script>
+</body>
+</html>
