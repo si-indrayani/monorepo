@@ -370,6 +370,14 @@ export class GameSelector {
 
         // Store reference to current game
         this.currentGame = game;
+        console.log('UNIQUE_LOG: currentGame set to:', game.getName());
+
+        // Set game instance BEFORE loading scripts
+        console.log('UNIQUE_LOG: About to call findGameInstance for:', game.getName());
+        this.currentGameInstance = this.findGameInstance(game);
+        console.log('UNIQUE_LOG: GameSelector: Setting window.currentGameInstance for', game.getName(), 'to:', this.currentGameInstance);
+        (window as any).currentGameInstance = this.currentGameInstance;
+        console.log('UNIQUE_LOG: GameSelector: window.currentGameInstance is now:', (window as any).currentGameInstance);
 
         // Show loading UI
         this.showLoadingUI(game);
@@ -386,9 +394,12 @@ export class GameSelector {
             // Wait for game scripts to be fully loaded
             await this.waitForGameScripts(game);
 
-            // Set game instance immediately after scripts loaded
-            this.currentGameInstance = this.findGameInstance(game);
-            (window as any).currentGameInstance = this.currentGameInstance;
+            // Check if scripts provided a better instance and update if needed
+            const updatedInstance = this.findGameInstance(game);
+            if (updatedInstance !== this.currentGameInstance) {
+                this.currentGameInstance = updatedInstance;
+                (window as any).currentGameInstance = this.currentGameInstance;
+            }
 
             // Check for React mounting and get game instance
             this.waitForReactMount(game);
@@ -537,14 +548,17 @@ export class GameSelector {
     }
 
     private findGameInstance(game: Game): any {
+        console.log('🎭 findGameInstance called for:', game.getName());
         // Try to find the game instance in various places
         // 1. Check if it's exposed on window
         if ((window as any)[game.getName() + 'Game']) {
+            console.log('🎭 Found game instance on window for:', game.getName());
             return (window as any)[game.getName() + 'Game'];
         }
 
         // 2. Check if it's in a global gameInstances object
         if ((window as any).gameInstances && (window as any).gameInstances[game.getName()]) {
+            console.log('🎭 Found game instance in gameInstances for:', game.getName());
             return (window as any).gameInstances[game.getName()];
         }
 

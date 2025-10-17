@@ -49,13 +49,22 @@ const waitForRoot = (callback, maxAttempts = 50) => {
 waitForRoot((rootElement) => {
   console.log('Puzzle game mounting to validated element:', rootElement);
   try {
-    const root = ReactDOM.createRoot(rootElement);
-    root.render(
-      <React.StrictMode>
-        <App />
-      </React.StrictMode>
-    );
-    console.log('Puzzle game mounted successfully');
+    const waitForGameInstance = () => {
+      const gameInstance = window.currentGameInstance || null;
+      console.log('Puzzle game checking for gameInstance:', gameInstance);
+      if (gameInstance) {
+        const root = ReactDOM.createRoot(rootElement);
+        root.render(
+          <React.StrictMode>
+            <App gameInstance={gameInstance} />
+          </React.StrictMode>
+        );
+        console.log('Puzzle game mounted successfully');
+      } else {
+        setTimeout(waitForGameInstance, 100);
+      }
+    };
+    waitForGameInstance();
   } catch (error) {
     console.error('Puzzle game mounting failed:', error);
   }
