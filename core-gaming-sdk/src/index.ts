@@ -123,6 +123,7 @@ export * from './GameSelector';
 // Global Exposure for Plugin Architecture
 // This makes the core SDK available globally for game plugins
 import { Game, GameRegistry, GameSelector } from './GameSelector';
+import { BaseScoringStrategy, ScoringAnalytics } from './strategies/ScoringStrategy';
 
 // Expose globally if in browser environment
 if (typeof window !== 'undefined') {
@@ -130,6 +131,8 @@ if (typeof window !== 'undefined') {
   (window as any).CoreGaming.Game = Game;
   (window as any).CoreGaming.GameRegistry = GameRegistry;
   (window as any).CoreGaming.GameSelector = GameSelector;
+  (window as any).CoreGaming.BaseScoringStrategy = BaseScoringStrategy;
+  (window as any).CoreGaming.ScoringAnalytics = ScoringAnalytics;
 
   // Create and expose a global registry instance
   (window as any).CoreGaming.RegistryInstance = new GameRegistry();

@@ -19,8 +19,91 @@ function App({ gameInstance }) {
   const [timer, setTimer] = useState(0);
   const [running, setRunning] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [score, setScore] = useState(0);
   const mazeRef = useRef(null);
   const timerRef = useRef();
+  const scoringStrategy = useRef(null);
+
+  // Initialize scoring strategy when component mounts
+  useEffect(() => {
+    if (window.CoreGaming && window.CoreGaming.BaseScoringStrategy) {
+      // Dynamically create PuzzleScoringStrategy class
+      const PuzzleScoringStrategy = class extends window.CoreGaming.BaseScoringStrategy {
+        constructor() {
+          super();
+          this.scoringRules = {
+            complete_puzzle: 100,
+            time_bonus: 10,
+            hint_used: -5,
+            restart_penalty: -10,
+            perfect_completion: 50,
+            speed_bonus: 20
+          };
+          this.bonusMultipliers = {
+            difficulty_bonus: 1.5,
+            first_attempt: 1.2,
+            no_hints: 1.3
+          };
+          this.penaltyRules = {
+            time_penalty: 2,
+            multiple_attempts: 5
+          };
+        }
+
+        calculateScore(action, context = {}) {
+          let baseScore = this.scoringRules[action] || 0;
+
+          switch (action) {
+            case 'complete_puzzle':
+              baseScore = this.calculatePuzzleCompletionScore(context);
+              break;
+            case 'time_bonus':
+              baseScore = this.calculatePuzzleTimeBonus(context);
+              break;
+            case 'speed_bonus':
+              baseScore = this.calculatePuzzleSpeedBonus(context);
+              break;
+          }
+
+          return Math.max(0, Math.floor(baseScore));
+        }
+
+        calculatePuzzleCompletionScore(context) {
+          let score = this.scoringRules.complete_puzzle;
+          if (context.difficulty === 'hard') {
+            score = this.applyMultiplier(score, 'difficulty_bonus');
+          }
+          if (context.custom?.attemptNumber === 1) {
+            score = this.applyMultiplier(score, 'first_attempt');
+          }
+          if (context.custom?.hintsUsed === 0) {
+            score = this.applyMultiplier(score, 'no_hints');
+          }
+          if (context.custom?.attemptNumber === 1 && context.custom?.hintsUsed === 0) {
+            score += this.scoringRules.perfect_completion;
+          }
+          return score;
+        }
+
+        calculatePuzzleTimeBonus(context) {
+          if (!context.timeRemaining || !context.maxTime) return 0;
+          const timeRatio = context.timeRemaining / context.maxTime;
+          if (timeRatio > 0.5) {
+            return this.scoringRules.time_bonus;
+          }
+          return 0;
+        }
+
+        calculatePuzzleSpeedBonus(context) {
+          if (!context.actionSpeed) return 0;
+          const speedScore = Math.max(0, 60 - context.actionSpeed);
+          return Math.floor(speedScore * 0.5);
+        }
+      };
+
+      scoringStrategy.current = new PuzzleScoringStrategy();
+    }
+  }, []);
 
   useEffect(() => {
     mazeRef.current && mazeRef.current.focus();
@@ -154,6 +237,32 @@ function App({ gameInstance }) {
   const handleEnd = async () => {
     console.log('🏁 Ending puzzle game and making API call...');
 
+    // Calculate final score using scoring strategy
+    let finalScore = 0;
+    if (scoringStrategy.current) {
+      const completionScore = scoringStrategy.current.calculateScore('complete_puzzle', {
+        difficulty: 'medium',
+        timeRemaining: Math.max(0, 300 - timer), // Assuming 5 minutes max time
+        maxTime: 300,
+        actionSpeed: timer,
+        custom: {
+          attemptNumber: 1, // Could track this
+          hintsUsed: 0 // Could track this
+        }
+      });
+
+      const timeBonus = scoringStrategy.current.calculateScore('time_bonus', {
+        timeRemaining: Math.max(0, 300 - timer),
+        maxTime: 300
+      });
+
+      finalScore = completionScore + timeBonus;
+    } else {
+      // Fallback scoring if strategy not available
+      finalScore = gameOver ? Math.max(0, 1000 - timer * 10) : 0;
+    }
+    setScore(finalScore);
+
     // Make API call to track game end
     try {
       console.log('📡 Making API request to track puzzle game end...');
@@ -172,7 +281,7 @@ function App({ gameInstance }) {
           gameId: "GAME_ID",
           miniGameType: "puzzle",
           duration: timer * 1000, // Convert seconds to milliseconds
-          finalScore: gameOver ? Math.max(0, 1000 - timer * 10) : 0, // Simple scoring based on time
+          finalScore: finalScore,
           completionStatus: gameOver ? "completed" : "abandoned",
           questionsAttempted: 0, // Not applicable for puzzle
           questionsCorrect: 0, // Not applicable for puzzle
@@ -236,6 +345,9 @@ function App({ gameInstance }) {
         )}
       </div>
       <div className="maze-timer">Time: {timer}s {paused ? '(Paused)' : ''}</div>
+      <div className="maze-score" style={{ fontSize: '18px', fontWeight: 'bold', color: '#4CAF50', margin: '10px 0' }}>
+        Score: {score}
+      </div>
       <div
         className="maze-grid"
         tabIndex={0}

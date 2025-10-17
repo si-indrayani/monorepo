@@ -8,7 +8,10 @@
     document.head.appendChild(l);
   });
   
-  var scripts = ["https://si-gaming-fantasy.s3.amazonaws.com/trivia/static/js/main.2460d330.js"];
+  var scripts = [
+    
+    "https://si-gaming-fantasy.s3.amazonaws.com/trivia/static/js/main.0f2e10fc.js"
+  ];
   var loadedCount = 0;
   var totalScripts = scripts.length;
   

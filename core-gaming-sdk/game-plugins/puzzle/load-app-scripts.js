@@ -8,7 +8,7 @@
     document.head.appendChild(l);
   });
   
-  var scripts = ["https://si-gaming-fantasy.s3.amazonaws.com/puzzle/static/js/main.5051ba82.js"];
+  var scripts = ["https://si-gaming-fantasy.s3.amazonaws.com/puzzle/static/js/main.06db089a.js"];
   var loadedCount = 0;
   var totalScripts = scripts.length;
   

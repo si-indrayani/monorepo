@@ -4,7 +4,18 @@
 
 import { IGame } from '../interfaces/IGame';
 import { GameConfig, GameConfigManager } from '../config/GameConfig';
-import { BaseScoringStrategy, ScoringStrategyFactory } from '../strategies/ScoringStrategy';
+import { BaseScoringStrategy } from '../strategies/ScoringStrategy';
+
+/**
+ * 🎯 Simple Scoring Strategy
+ * 
+ * A basic concrete implementation of BaseScoringStrategy for generic use
+ */
+class SimpleScoringStrategy extends BaseScoringStrategy {
+  calculateScore(action: string, context?: any): number {
+    return this.scoringRules[action] || 1;
+  }
+}
 
 /**
  * 🎮 Game Class Constructor Type
@@ -57,10 +68,7 @@ export class UniversalGameFactory {
 
       // 2. Create scoring strategy
       const gameType = this.extractGameType(gameId);
-      const scoringStrategy = ScoringStrategyFactory.createStrategy(
-        gameType,
-        config.scoringRules
-      );
+      const scoringStrategy = new SimpleScoringStrategy();
 
       // Apply any scoring rule overrides
       if (options.scoringOverrides) {
