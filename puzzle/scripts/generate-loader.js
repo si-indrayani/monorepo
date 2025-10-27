@@ -21,7 +21,6 @@ while ((match = cssRegex.exec(html)) !== null) {
 }
 
 // Generate loader script
-const baseUrl = 'https://si-gaming-fantasy.s3.amazonaws.com/puzzle'; // Replace with your actual S3 bucket URL
 const cacheBuster = '?v=' + Date.now(); // Cache busting parameter
 
 // Filter out absolute paths and convert relative paths
@@ -30,18 +29,22 @@ const relativeStylesheets = stylesheets.filter(href => !href.startsWith('http') 
 
 const loader = `// Dynamically loads built app scripts and styles
 (function() {
-  var stylesheets = ${JSON.stringify(relativeStylesheets.map(href => baseUrl + href + cacheBuster))};
+  // Get base URL from script tag or use current location
+  var scriptTag = document.currentScript || document.querySelector('script[src*="load-app-scripts.js"]');
+  var baseUrl = scriptTag ? scriptTag.src.replace('/load-app-scripts.js', '') : window.location.origin + '/puzzle';
+
+  var stylesheets = ${JSON.stringify(relativeStylesheets.map(href => '${baseUrl}/' + href + cacheBuster))};
   stylesheets.forEach(function(href) {
     var l = document.createElement('link');
     l.rel = 'stylesheet';
     l.href = href;
     document.head.appendChild(l);
   });
-  
-  var scripts = ${JSON.stringify(relativeScripts.map(src => baseUrl + src + cacheBuster))};
+
+  var scripts = ${JSON.stringify(relativeScripts.map(src => '${baseUrl}/' + src + cacheBuster))};
   var loadedCount = 0;
   var totalScripts = scripts.length;
-  
+
   scripts.forEach(function(src) {
     var s = document.createElement('script');
     s.src = src;

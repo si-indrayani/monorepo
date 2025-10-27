@@ -5,13 +5,14 @@ config()
 
 export default defineConfig({
   entry: ['src/index.ts'],
-  format: ['cjs', 'esm'],
+  format: ['cjs', 'esm', 'iife'],
   dts: true,
   clean: true,
   external: ['preact'],
   outDir: 'dist',
   splitting: false,
   sourcemap: true,
+  globalName: 'CoreGamingSDK',
   esbuildOptions(options) {
     options.jsx = 'automatic'
     options.jsxImportSource = 'preact'

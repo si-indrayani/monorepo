@@ -1,0 +1,109 @@
+{
+  "tenants": {
+    "NFL": {
+      "tenantId": "NFL_TENANT",
+      "name": "NFL Gaming Hub",
+      "games": [
+        {
+          "id": "trivia",
+          "name": "NFL Trivia",
+          "displayName": "NFL Trivia",
+          "emoji": "🏈",
+          "category": "NFL Trivia",
+          "difficulty": "medium",
+          "gameMode": "single_player",
+          "enabled": true
+        },
+        {
+          "id": "puzzle",
+          "name": "NFL Puzzle",
+          "displayName": "NFL Puzzle",
+          "emoji": "🧩",
+          "category": "NFL Puzzle",
+          "difficulty": "medium",
+          "gameMode": "single_player",
+          "enabled": true
+        }
+      ]
+    },
+    "NBA": {
+      "tenantId": "NBA_TENANT",
+      "name": "NBA Gaming Hub",
+      "games": [
+        {
+          "id": "trivia",
+          "name": "NBA Trivia",
+          "displayName": "NBA Trivia",
+          "emoji": "🏀",
+          "category": "NBA Trivia",
+          "difficulty": "medium",
+          "gameMode": "single_player",
+          "enabled": true
+        },
+        {
+          "id": "puzzle",
+          "name": "NBA Puzzle",
+          "displayName": "NBA Puzzle",
+          "emoji": "🧩",
+          "category": "NBA Puzzle",
+          "difficulty": "medium",
+          "gameMode": "single_player",
+          "enabled": true
+        }
+      ]
+    },
+    "MLB": {
+      "tenantId": "MLB_TENANT",
+      "name": "MLB Gaming Hub",
+      "games": [
+        {
+          "id": "trivia",
+          "name": "MLB Trivia",
+          "displayName": "MLB Trivia",
+          "emoji": "⚾",
+          "category": "MLB Trivia",
+          "difficulty": "medium",
+          "gameMode": "single_player",
+          "enabled": true
+        },
+        {
+          "id": "puzzle",
+          "name": "MLB Puzzle",
+          "displayName": "MLB Puzzle",
+          "emoji": "🧩",
+          "category": "MLB Puzzle",
+          "difficulty": "medium",
+          "gameMode": "single_player",
+          "enabled": true
+        }
+      ]
+    },
+    "NHL": {
+      "tenantId": "NHL_TENANT",
+      "name": "NHL Gaming Hub",
+      "games": [
+        {
+          "id": "trivia",
+          "name": "NHL Trivia",
+          "displayName": "NHL Trivia",
+          "emoji": "🏒",
+          "category": "NHL Trivia",
+          "difficulty": "medium",
+          "gameMode": "single_player",
+          "enabled": true
+        },
+        {
+          "id": "puzzle",
+          "name": "NHL Puzzle",
+          "displayName": "NHL Puzzle",
+          "emoji": "🧩",
+          "category": "NHL Puzzle",
+          "difficulty": "medium",
+          "gameMode": "single_player",
+          "enabled": true
+        }
+      ]
+    }
+  },
+  "defaultTenant": "NFL"
+}

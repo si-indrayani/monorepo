@@ -1,6 +1,6 @@
 // Dynamically loads built app scripts and styles
 (function() {
-  var stylesheets = ["https://si-gaming-fantasy.s3.amazonaws.com/trivia/static/css/main.60fa25de.css?v=" + Date.now()];
+  var stylesheets = ["https://si-gaming-fantasy.s3.amazonaws.com/trivia/static/css/main.89162b4a.css?v=1761047916549"];
   stylesheets.forEach(function(href) {
     var l = document.createElement('link');
     l.rel = 'stylesheet';
@@ -8,7 +8,7 @@
     document.head.appendChild(l);
   });
   
-  var scripts = ["https://si-gaming-fantasy.s3.amazonaws.com/trivia/static/js/main.bea2ff82.js?v=" + Date.now()];
+  var scripts = ["https://si-gaming-fantasy.s3.amazonaws.com/trivia/static/js/main.0f2e10fc.js?v=1761047916549"];
   var loadedCount = 0;
   var totalScripts = scripts.length;
   

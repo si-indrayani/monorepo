@@ -1,0 +1,36 @@
+/* Reset and base styles for full-page gaming hub */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Ensure smooth scrolling and performance */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Focus styles for accessibility */
+*:focus {
+  outline: 2px solid #4CAF50;
+  outline-offset: 2px;
+}
+
+button:focus,
+button:focus-visible {
+  outline: 2px solid #4CAF50;
+  outline-offset: 2px;
+}

@@ -24,6 +24,19 @@ function App({ gameInstance }) {
   const timerRef = useRef();
   const scoringStrategy = useRef(null);
 
+  // Detailed scoring state
+  const [scoringBreakdown, setScoringBreakdown] = useState({
+    baseScore: 0,
+    timeBonus: 0,
+    speedBonus: 0,
+    multipliers: [],
+    penalties: [],
+    totalScore: 0
+  });
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [hintsUsed, setHintsUsed] = useState(0);
+  const [attempts, setAttempts] = useState(1);
+
   // Initialize scoring strategy when component mounts
   useEffect(() => {
     if (window.CoreGaming && window.CoreGaming.BaseScoringStrategy) {
@@ -232,36 +245,85 @@ function App({ gameInstance }) {
     setTimer(0);
     setRunning(false);
     setPaused(false);
+    setAttempts(prev => prev + 1);
+    setScoringBreakdown({
+      baseScore: 0,
+      timeBonus: 0,
+      speedBonus: 0,
+      multipliers: [],
+      penalties: [],
+      totalScore: 0
+    });
   };
 
   const handleEnd = async () => {
     console.log('🏁 Ending puzzle game and making API call...');
 
-    // Calculate final score using scoring strategy
+    // Calculate final score using scoring strategy with detailed breakdown
     let finalScore = 0;
+    let breakdown = {
+      baseScore: 0,
+      timeBonus: 0,
+      speedBonus: 0,
+      multipliers: [],
+      penalties: [],
+      totalScore: 0
+    };
+
     if (scoringStrategy.current) {
-      const completionScore = scoringStrategy.current.calculateScore('complete_puzzle', {
+      const context = {
         difficulty: 'medium',
         timeRemaining: Math.max(0, 300 - timer), // Assuming 5 minutes max time
         maxTime: 300,
         actionSpeed: timer,
         custom: {
-          attemptNumber: 1, // Could track this
-          hintsUsed: 0 // Could track this
+          attemptNumber: attempts,
+          hintsUsed: hintsUsed
         }
-      });
+      };
 
-      const timeBonus = scoringStrategy.current.calculateScore('time_bonus', {
-        timeRemaining: Math.max(0, 300 - timer),
-        maxTime: 300
-      });
+      // Calculate completion score
+      const completionScore = scoringStrategy.current.calculateScore('complete_puzzle', context);
+      breakdown.baseScore = completionScore;
 
-      finalScore = completionScore + timeBonus;
+      // Calculate time bonus
+      const timeBonus = scoringStrategy.current.calculateScore('time_bonus', context);
+      breakdown.timeBonus = timeBonus;
+
+      // Calculate speed bonus
+      const speedBonus = scoringStrategy.current.calculateScore('speed_bonus', context);
+      breakdown.speedBonus = speedBonus;
+
+      // Track multipliers applied
+      if (context.custom.attemptNumber === 1) {
+        breakdown.multipliers.push('First Attempt Bonus (1.2x)');
+      }
+      if (context.custom.hintsUsed === 0) {
+        breakdown.multipliers.push('No Hints Bonus (1.3x)');
+      }
+      if (context.difficulty === 'hard') {
+        breakdown.multipliers.push('Difficulty Bonus (1.5x)');
+      }
+
+      // Track penalties
+      if (context.custom.attemptNumber > 1) {
+        breakdown.penalties.push(`Multiple Attempts (-${context.custom.attemptNumber * 5})`);
+      }
+      if (context.custom.hintsUsed > 0) {
+        breakdown.penalties.push(`Hints Used (-${context.custom.hintsUsed * 5})`);
+      }
+
+      finalScore = completionScore + timeBonus + speedBonus;
+      breakdown.totalScore = finalScore;
     } else {
       // Fallback scoring if strategy not available
       finalScore = gameOver ? Math.max(0, 1000 - timer * 10) : 0;
+      breakdown.baseScore = finalScore;
+      breakdown.totalScore = finalScore;
     }
+
     setScore(finalScore);
+    setScoringBreakdown(breakdown);
 
     // Make API call to track game end
     try {
@@ -348,6 +410,48 @@ function App({ gameInstance }) {
       <div className="maze-score" style={{ fontSize: '18px', fontWeight: 'bold', color: '#4CAF50', margin: '10px 0' }}>
         Score: {score}
       </div>
+      
+      {/* Detailed Scoring Display */}
+      {scoringBreakdown.totalScore > 0 && (
+        <div className="scoring-breakdown" style={{ 
+          background: 'rgba(76, 175, 80, 0.1)', 
+          border: '1px solid #4CAF50', 
+          borderRadius: '8px', 
+          padding: '10px', 
+          margin: '10px 0',
+          fontSize: '14px'
+        }}>
+          <h4 style={{ margin: '0 0 8px 0', color: '#2E7D32' }}>🎯 Score Breakdown:</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            <div>🏆 Base Score: <strong>{scoringBreakdown.baseScore}</strong></div>
+            <div>⏱️ Time Bonus: <strong>+{scoringBreakdown.timeBonus}</strong></div>
+            <div>⚡ Speed Bonus: <strong>+{scoringBreakdown.speedBonus}</strong></div>
+            <div>🔥 Current Streak: <strong>{currentStreak}</strong></div>
+          </div>
+          
+          {scoringBreakdown.multipliers.length > 0 && (
+            <div style={{ marginTop: '8px' }}>
+              <div style={{ color: '#FF9800', fontWeight: 'bold' }}>✨ Multipliers Applied:</div>
+              {scoringBreakdown.multipliers.map((multiplier, idx) => (
+                <div key={idx} style={{ fontSize: '12px', color: '#E65100' }}>• {multiplier}</div>
+              ))}
+            </div>
+          )}
+          
+          {scoringBreakdown.penalties.length > 0 && (
+            <div style={{ marginTop: '8px' }}>
+              <div style={{ color: '#F44336', fontWeight: 'bold' }}>⚠️ Penalties Applied:</div>
+              {scoringBreakdown.penalties.map((penalty, idx) => (
+                <div key={idx} style={{ fontSize: '12px', color: '#C62828' }}>• {penalty}</div>
+              ))}
+            </div>
+          )}
+          
+          <div style={{ borderTop: '1px solid #4CAF50', marginTop: '8px', paddingTop: '8px', fontWeight: 'bold', color: '#2E7D32' }}>
+            🏅 Total Score: {scoringBreakdown.totalScore}
+          </div>
+        </div>
+      )}
       <div
         className="maze-grid"
         tabIndex={0}

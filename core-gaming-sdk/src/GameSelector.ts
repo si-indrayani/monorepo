@@ -1,4 +1,5 @@
 // Game Loading Rules System
+import { SessionManager } from './session/SessionManager';
 declare global {
     interface ImportMetaEnv {
         VITE_S3_BASE_URL?: string;
@@ -34,39 +35,19 @@ class BrowserCompatibilityRule implements GameLoadRule {
 class NetworkConnectivityRule implements GameLoadRule {
     async validate(game: Game): Promise<boolean> {
         try {
-            // Try to fetch a small test file from S3
-            const response = await fetch(`${game.getBaseUrl()}/test-connectivity.txt`, {
-                method: 'HEAD',
-                cache: 'no-cache',
-                mode: 'no-cors' // Allow requests without CORS headers
-            });
-            // With no-cors mode, we can't read the response status
-            // So we'll assume success if no error is thrown
+            // Skip HEAD request validation due to CORS/bucket permission issues
+            // The actual script loading will fail if files are not accessible
+            console.log(`🔍 Skipping network validation for ${game.getName()} due to bucket permissions`);
             return true;
         } catch (error) {
-            // If CORS blocks the request, try alternative connectivity check
-            return await this.fallbackConnectivityCheck();
-        }
-    }
-
-    private async fallbackConnectivityCheck(): Promise<boolean> {
-        try {
-            // Try to fetch from a CORS-enabled endpoint (like a public API)
-            const response = await fetch(import.meta.env.VITE_CONNECTIVITY_TEST_URL || 'https://httpbin.org/status/200', {
-                method: 'HEAD',
-                cache: 'no-cache'
-            });
-            return response.ok;
-        } catch {
-            // If all connectivity checks fail, assume network is available
-            // This prevents blocking game loading due to CORS issues
-            console.warn('Network connectivity check limited by CORS, proceeding...');
+            // Always return true to allow game loading to proceed
+            console.warn('Network check skipped due to permissions, proceeding with game load:', error.message);
             return true;
         }
     }
 
     getErrorMessage(): string {
-        return 'Network connectivity check failed';
+        return 'Network connectivity check skipped';
     }
 }
 
@@ -230,19 +211,85 @@ export class GameSelector {
     private gameValidator: GameValidator;
     private currentGame: Game | null = null;
     private currentGameInstance: any = null; // Reference to the actual game instance
+    private currentTenant: string = 'NFL';
+    private sessionManager: SessionManager;
 
-    constructor(containerId: string, s3BaseUrl = (import.meta.env?.VITE_S3_BASE_URL || "https://si-gaming-fantasy.s3.amazonaws.com")) {
-        this.s3BaseUrl = s3BaseUrl;
+    constructor(containerId: string, s3BaseUrl?: string) {
+        // Determine the correct base URL based on environment
+        const defaultBaseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+            ? '/s3-proxy'
+            : 'https://si-gaming-fantasy.s3.amazonaws.com';
+
+        this.s3BaseUrl = s3BaseUrl || (import.meta.env?.VITE_S3_BASE_URL || defaultBaseUrl);
         this.container = document.getElementById(containerId) || document.body;
 
         // Initialize components
         this.gameRegistry = window.CoreGaming?.RegistryInstance || new GameRegistry();
-        this.gameLoader = new GameLoader(s3BaseUrl);
+        this.gameLoader = new GameLoader(this.s3BaseUrl);
         this.gameValidator = new GameValidator();
+    this.sessionManager = new SessionManager((window as any).currentUserId || 'player_12345');
 
-        // NOTE: Games are now registered by individual game plugins via window.CoreGaming.RegistryInstance.registerGame()
+        // Check if game data was pre-selected (from gaming hub)
+        const selectedGameData = (window as any).selectedGameData;
+        if (selectedGameData) {
+            console.log('🎮 Game pre-selected from hub:', selectedGameData);
+            this.loadGameFromHub(selectedGameData);
+        } else {
+            this.renderInitialUI();
+        }
+    }
 
-        this.renderInitialUI();
+    private async loadGameFromHub(gameData: any) {
+        console.log('🎮 Loading game from hub data:', gameData);
+
+        // Set tenant information
+        this.currentTenant = gameData.tenantId || 'NFL';
+
+        // For hub games, directly register and track without loading external scripts
+        await this.registerAndTrackHubGame(gameData);
+    }
+
+    private async registerAndTrackHubGame(gameData: any) {
+        console.log('🎯 Registering and loading hub game:', gameData);
+
+        // Register the game in the registry
+        const game = this.createGameFromHubData(gameData);
+        this.gameRegistry.registerGame(game);
+        this.currentGame = game;
+
+        // Set tenant information
+        this.currentTenant = gameData.tenantId || 'NFL';
+
+        // For hub games, actually load the game from S3 instead of just showing success
+        console.log('🎮 Loading actual game from S3 for hub game:', game.getName());
+        await this.loadGame(game);
+    }
+
+    private createGameFromHubData(gameData: any): Game {
+        // Create a Game instance for the selected game
+        const gameName = gameData.name || gameData.id;
+        const baseUrl = `${this.s3BaseUrl}/${gameName}`;
+
+        // Create a basic Game instance - you might want to extend this with proper subclasses
+        class HubGame extends Game {
+            constructor(name: string, baseUrl: string, emoji: string) {
+                super(name, baseUrl, emoji);
+            }
+
+            getScriptsLoadedEvent(): string {
+                return `${this.getName()}-scripts-loaded`;
+            }
+
+            getGradient(): string {
+                const gradientMap: {[key: string]: string} = {
+                    'trivia': 'linear-gradient(45deg, #ff6b6b, #ee5a24)',
+                    'puzzle': 'linear-gradient(45deg, #4ecdc4, #44a08d)'
+                };
+                return gradientMap[this.getName()] || 'linear-gradient(45deg, #667eea, #764ba2)';
+            }
+        }
+
+        return new HubGame(gameName, baseUrl, gameData.emoji || '🎮');
     }
 
     private renderInitialUI() {
@@ -477,6 +524,28 @@ export class GameSelector {
         `;
     }
 
+    private showHubGameSuccess(gameData: any) {
+        this.container.innerHTML = `
+            <div style="
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                text-align: center;
+                padding: 40px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border-radius: 15px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                max-width: 500px;
+                margin: 50px auto;
+            ">
+                <div style="font-size: 60px; margin-bottom: 20px;">${gameData.emoji || '🎮'}</div>
+                <h2 style="margin-bottom: 20px; font-size: 28px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">🎯 ${gameData.displayName || gameData.name} Selected!</h2>
+                <p style="margin-bottom: 30px; font-size: 16px;">Tenant: ${this.currentTenant} | Game Mode: ${gameData.gameMode || 'Single Player'}</p>
+                <div style="border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid white; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto;"></div>
+                <p style="font-size: 14px; opacity: 0.8;">Initializing game session...</p>
+            </div>
+        `;
+    }
+
     private showLoadingUI(game: Game) {
         this.container.innerHTML = `
             <div style="
@@ -565,43 +634,9 @@ export class GameSelector {
         // For local games, return a mock instance
         console.log('🎭 Returning mock game instance for:', game.getName());
         return {
-            start:async () => {
-                   console.log('📡 Making API request to track game start...');
-                        const payload = {
-                            tenantId: "TENANT_ID",
-                            playerId: "player_12345",
-                            eventType: "game_play_start",
-                            occurredAt: new Date().toISOString(),
-                            sessionId: "session_abc123",
-                            appVersion: "1.2.3",
-                            locale: "en_US",
-                            region: "NA",
-                            consentState: "granted",
-                            schemaVersion: "1.0",
-                            eventData: {
-                                gameId: "GAME_ID",
-                                miniGameType: this.currentGame?.getName() === 'puzzle' ? 'puzzle' : 'quiz',
-                                difficulty: "medium",
-                                levelId: "level_5",
-                                gameMode: "single_player",
-                                category: "NFL Trivia"
-                            }
-                        };
-
-                        console.log('📦 GameSelector start request payload:', JSON.stringify(payload, null, 2));
-
-                        const response = await fetch('https://secure-lacewing-sweeping.ngrok-free.app/api/events', {
-                            method: 'POST',
-                            headers: {
-                                'Authorization': 'Basic YWRtaW46Z2FtaW5nMTIz',
-                                'Accept': 'application/json',
-                                'ngrok-skip-browser-warning': 'true',
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(payload)
-                        });
-
-                console.log(`▶️ ${game.getDisplayName()} started`)},
+            start: async () => {
+                console.log(`▶️ ${game.getDisplayName()} started`);
+            },
             pause: () => console.log(`⏸️ ${game.getDisplayName()} paused`),
             resume: () => console.log(`▶️ ${game.getDisplayName()} resumed`),
             restart: () => console.log(`🔄 ${game.getDisplayName()} restarted`),
@@ -672,11 +707,18 @@ export class GameSelector {
                 case 'start':
                     console.log('🚀 Starting game via GameSelector and making API call...');
 
+                    // Start session tracking
+                    this.sessionManager.startSession(
+                        this.currentGame?.getName() || 'unknown',
+                        this.currentTenant,
+                        'medium'
+                    );
+
                     // Make API call to track game start
                     try {
                         console.log('📡 Making API request to track game start...');
                         const payload = {
-                            tenantId: "TENANT_ID",
+                            tenantId: this.currentTenant || "TENANT_ID",
                             playerId: "player_12345",
                             eventType: "game_play_start",
                             occurredAt: new Date().toISOString(),
@@ -687,12 +729,12 @@ export class GameSelector {
                             consentState: "granted",
                             schemaVersion: "1.0",
                             eventData: {
-                                gameId: "GAME_ID",
+                                gameId: this.currentGame?.getName() || "GAME_ID",
                                 miniGameType: this.currentGame?.getName() === 'puzzle' ? 'puzzle' : 'quiz',
                                 difficulty: "medium",
                                 levelId: "level_5",
                                 gameMode: "single_player",
-                                category: "NFL Trivia"
+                                category: `${this.currentTenant || 'Gaming'} ${this.currentGame?.getDisplayName() || 'Game'}`
                             }
                         };
 
@@ -723,39 +765,78 @@ export class GameSelector {
                         console.error('❌ Error details:', error.message, error.stack);
                     }
 
-                    if (typeof this.currentGameInstance.start === 'function') {
-                        await this.currentGameInstance.start();
+                    // Start the game instance
+                    try {
+                        if (typeof this.currentGameInstance.start === 'function') {
+                            await this.currentGameInstance.start();
+                            this.updateControlButtons('started');
+                        }
+                    } catch (error) {
+                        console.error('❌ Error starting game instance:', error);
+                        console.error('❌ Error details:', error.message, error.stack);
+                        // Still update buttons even if game start fails
                         this.updateControlButtons('started');
                     }
                     break;
                 case 'pause':
-                    if (typeof this.currentGameInstance.pause === 'function') {
-                        this.currentGameInstance.pause();
-                        this.updateControlButtons('paused');
+                    // Track pause in session
+                    this.sessionManager.pauseSession();
+                    
+                    try {
+                        if (typeof this.currentGameInstance.pause === 'function') {
+                            this.currentGameInstance.pause();
+                            this.updateControlButtons('paused');
+                        }
+                    } catch (error) {
+                        console.error('❌ Error pausing game instance:', error);
+                        console.error('❌ Error details:', error.message, error.stack);
                     }
                     break;
                 case 'resume':
-                    if (typeof this.currentGameInstance.resume === 'function') {
-                        this.currentGameInstance.resume();
-                        this.updateControlButtons('resumed');
+                    // Track resume in session
+                    this.sessionManager.resumeSession();
+                    
+                    try {
+                        if (typeof this.currentGameInstance.resume === 'function') {
+                            this.currentGameInstance.resume();
+                            this.updateControlButtons('resumed');
+                        }
+                    } catch (error) {
+                        console.error('❌ Error resuming game instance:', error);
+                        console.error('❌ Error details:', error.message, error.stack);
                     }
                     break;
                 case 'restart':
-                    if (typeof this.currentGameInstance.restart === 'function') {
-                        await this.currentGameInstance.restart();
-                        this.updateControlButtons('started');
-                    } else if (typeof this.currentGameInstance.start === 'function') {
-                        // Fallback: end and start again
-                        if (typeof this.currentGameInstance.end === 'function') {
-                            await this.currentGameInstance.end();
+                    try {
+                        if (typeof this.currentGameInstance.restart === 'function') {
+                            await this.currentGameInstance.restart();
+                            this.updateControlButtons('started');
+                        } else if (typeof this.currentGameInstance.start === 'function') {
+                            // Fallback: end and start again
+                            if (typeof this.currentGameInstance.end === 'function') {
+                                await this.currentGameInstance.end();
+                            }
+                            await this.currentGameInstance.start();
+                            this.updateControlButtons('started');
                         }
-                        await this.currentGameInstance.start();
-                        this.updateControlButtons('started');
+                    } catch (error) {
+                        console.error('❌ Error restarting game instance:', error);
+                        console.error('❌ Error details:', error.message, error.stack);
                     }
                     break;
                 case 'end':
-                    if (typeof this.currentGameInstance.end === 'function') {
-                        await this.currentGameInstance.end();
+                    // Track end in session
+                    this.sessionManager.endSession('completed');
+                    
+                    try {
+                        if (typeof this.currentGameInstance.end === 'function') {
+                            await this.currentGameInstance.end();
+                            this.updateControlButtons('ended');
+                        }
+                    } catch (error) {
+                        console.error('❌ Error ending game instance:', error);
+                        console.error('❌ Error details:', error.message, error.stack);
+                        // Still update buttons even if game end fails
                         this.updateControlButtons('ended');
                     }
                     break;
@@ -801,23 +882,6 @@ export class GameSelector {
     }
 }
 
-// Export for use in other projects
 export function initGameSelector(containerId: string, s3BaseUrl?: string) {
-    return new GameSelector(containerId, s3BaseUrl || (import.meta.env?.VITE_S3_BASE_URL || "https://si-gaming-fantasy.s3.amazonaws.com"));
+    return new GameSelector(containerId, s3BaseUrl);
 }
-
-// Global exposure for game plugins
-(function(window: Window) {
-    // Initialize global namespace
-    window.CoreGaming = window.CoreGaming || {};
-
-    // Expose core classes globally
-    window.CoreGaming.Game = Game;
-    window.CoreGaming.GameRegistry = GameRegistry;
-    window.CoreGaming.GameSelector = GameSelector;
-
-    // Create and expose a global registry instance
-    window.CoreGaming.RegistryInstance = new GameRegistry();
-
-    console.log('🎮 Core Gaming SDK exposed globally as window.CoreGaming');
-})(window as any);

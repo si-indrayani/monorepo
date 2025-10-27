@@ -120,22 +120,30 @@ export default class CoreGamingSDK {
 // Game Selector UI
 export * from './GameSelector';
 
+// Session Management
+export { SessionManager } from './session/SessionManager';
+
 // Global Exposure for Plugin Architecture
 // This makes the core SDK available globally for game plugins
 import { Game, GameRegistry, GameSelector } from './GameSelector';
 import { BaseScoringStrategy, ScoringAnalytics } from './strategies/ScoringStrategy';
+import { SessionManager } from './session/SessionManager';
 
-// Expose globally if in browser environment
-if (typeof window !== 'undefined') {
-  (window as any).CoreGaming = (window as any).CoreGaming || {};
-  (window as any).CoreGaming.Game = Game;
-  (window as any).CoreGaming.GameRegistry = GameRegistry;
-  (window as any).CoreGaming.GameSelector = GameSelector;
-  (window as any).CoreGaming.BaseScoringStrategy = BaseScoringStrategy;
-  (window as any).CoreGaming.ScoringAnalytics = ScoringAnalytics;
+// Expose globally immediately (works in both Node.js and browser environments)
+declare const window: any;
+declare const global: any;
 
-  // Create and expose a global registry instance
-  (window as any).CoreGaming.RegistryInstance = new GameRegistry();
+// Create global namespace
+const globalObj = typeof window !== 'undefined' ? window : (typeof global !== 'undefined' ? global : {});
 
-  console.log('🎮 Core Gaming SDK exposed globally as window.CoreGaming');
-}
+globalObj.CoreGaming = globalObj.CoreGaming || {};
+globalObj.CoreGaming.Game = Game;
+globalObj.CoreGaming.GameRegistry = GameRegistry;
+globalObj.CoreGaming.GameSelector = GameSelector;
+globalObj.CoreGaming.BaseScoringStrategy = BaseScoringStrategy;
+globalObj.CoreGaming.ScoringAnalytics = ScoringAnalytics;
+globalObj.CoreGaming.SessionManager = SessionManager;
+
+globalObj.CoreGaming.RegistryInstance = new GameRegistry();
+
+console.log('🎮 Core Gaming SDK exposed globally as window.CoreGaming');

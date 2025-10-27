@@ -1,0 +1,9 @@
+[
+  {
+    "sessionId": "test_session",
+    "gameId": "puzzle",
+    "playerId": "testuser",
+    "status": "completed",
+    "score": 100
+  }
+]
